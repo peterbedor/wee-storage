@@ -1,22 +1,18 @@
 Wee.fn.make('storage', {
+	set: function(key, value) {
+		this.$private.set(key, value);
+	},
+
 	get: function(key) {
 		return this.$private.get(key);
-	},
-
-	set: function(key, val, type) {
-		this.$private.set(key, val, type);
-	},
-
-	update: function(key, val, type) {
-		this.$private.update(key, val, type);
 	},
 
 	delete: function(key) {
 		this.$private.delete(key);
 	},
 
-	push: function(key, val) {
-		this.$private.push(key, val);
+	push: function(key, value) {
+		this.$private.push(key, value);
 	}
 }, {
 	_construct: function(type) {
@@ -26,131 +22,103 @@ Wee.fn.make('storage', {
 		this.storage = window[storageType];
 	},
 
-	get: function(key, full) {
-		if (full) {
-			key = key.split('.');
+	set: function(key, value) {
+		var segments = key.toString().split('.');
 
-			return this.processGet(key[0]);
-		}
+		if (segments.length > 1) {
+			var firstKey = segments.shift(),
+				lastKey = segments.pop(),
+				data = this.getData(firstKey);
 
-		if (this.isDeep(key)) {
-			return this.processDeepGet(key);
-		} else {
-			return this.processGet(key);
-		}
-	},
+			if (data.hasOwnProperty(lastKey)) {
+				data[lastKey] = value;
 
-	set: function(key, val, type) {
-		if (this.isDeep(key)) {
-			this.setDeep(key, val, type);
-		} else {
-			this.storage.setItem(key, this.processSetVal(val, type));
-		}
-	},
-
-	setDeep: function(key, val, type) {
-		var obj = this.get(key, true);
-
-		key = key.split('.');
-
-		key.reduce(function(prev, cur, i, arr) {
-			var isLast = (i === arr.length - 2);
-
-			if (isLast) {
-				return (prev[cur] = val);
+				this.set(firstKey, data);
 			}
-			
-			return ($.isObject(prev[cur])) ? prev[cur] : (prev[cur] = {});
-		}, obj);
+		} else {
+			value = this.processValue(value);
 
-		console.log(obj);
+			this.storage.setItem(key, value);
+		}
 	},
 
-	update: function(key, val, type) {
-		//
+	get: function(key) {
+		var segments = key.toString().split('.'),
+			data = this.getData(segments.shift()),
+			i = 0;
+
+		if (data) {
+			for (; i < segments.length; i++) {
+				data = data.hasOwnProperty(segments[i]) ?
+					data[segments[i]] : null;
+			}
+		}
+
+		return data;
 	},
 
 	delete: function(key) {
-		//
-	},
+		var segments = key.toString().split('.');
 
-	push: function(key, val) {
-		//
-	},
+		if (segments.length > 1) {
+			var firstKey = segments.shift(),
+				lastKey = segments.pop(),
+				data = this.getData(firstKey);
 
-	isDeep: function(key) {
-		return key.indexOf('.') > 0;
-	},
+			if (data.hasOwnProperty(lastKey)) {
+				delete data[lastKey];
 
-	processSetVal: function(val, type) {
-		type = this.getType(val, type);
-
-		return JSON.stringify({
-			type: type,
-			val: val
-		});
-	},
-
-	processGet: function(key) {
-		var val = JSON.parse(
-			this.storage.getItem(key)
-		);
-
-		if (val.val) {
-			return val.val;
-		}
-
-		return val;
-	},
-
-	processDeepGet: function(key) {
-		key = this.processKey(key);
-
-		var keyArray = key.split('.'),
-			obj = this.get(keyArray[0]),
-			len = keyArray.length,
-			i = 1;
-
-		for (; i < len; i++){
-			obj = obj[keyArray[i]];
-		}
-
-		return obj;
-	},
-
-	getType: function(val, type) {
-		type = type || null;
-
-		if (type === null || ! this.validateType(type)) {
-			if ($.isString(val)) {
-				type = 'string';
-			} else if ($.isArray(val)) {
-				type = 'array';
-			} else if ($.isObject(val)) {
-				type = 'object';
-			} else if ($.isFunction(val)) {
-				type = 'function';
-			} else if (typeof val == 'number') {
-				type = 'number';
+				this.set(firstKey, data);
+			} else {
+				return false;
 			}
 		}
 
-		return type;
+		this.storage.removeItem(key);
 	},
 
-	processKey: function(key) {
-		// Convert indexes to properties
-		key = key.replace(/\[(\w+)\]/g, '.$1');
+	push: function(key, value) {
+		var segments = key.toString().split('.'),
+			data = this.get(key);
 
-		// Strip leading dot
-		key = key.replace(/^\./, '');
+		if (segments.length > 1) {
+			this.pushNested(key, value, segments);
+		} else {
+			if ($.isArray(data)) {
+				data.push(value);
 
-		return key;
+				this.set(key, data);
+			}
+		}
 	},
 
-	validateType: function(type) {
-		return type.match(/(^string$|^array$|^object$|^function$)/g);
+	pushNested: function(key, value, segments) {
+		var firstKey = segments.shift(),
+			lastKey = segments.pop(),
+			data = this.getData(firstKey);
+
+		if (data.hasOwnProperty(lastKey) && $.isArray(data[lastKey])) {
+			data[lastKey].push(value);
+
+			this.set(firstKey, data);
+		}
+	},
+
+	getData: function(key) {
+		var data = this.storage.getItem(key);
+
+		try {
+			data = JSON.parse(data);
+		} catch (e) {}
+
+		return data;
+	},
+
+	processValue: function(value) {
+		try {
+			value = JSON.stringify(value);
+		} catch(e) {}
+
+		return value;
 	}
-}, {
-	instance: false
 });
