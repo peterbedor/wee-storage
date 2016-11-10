@@ -1,20 +1,41 @@
 Wee.fn.make('storage', {
+	/**
+	 * @param {string} key
+	 * @param {*} value
+	 */
 	set: function(key, value) {
 		this.$private.set(key, value);
 	},
 
+	/**
+	 * @param {string} key
+	 * @returns {*}
+	 */
 	get: function(key) {
 		return this.$private.get(key);
 	},
 
+	/**
+	 * @param {string} key
+	 */
 	delete: function(key) {
 		this.$private.delete(key);
 	},
 
+	/**
+	 * @param {string} key
+	 * @param {*} value
+	 */
 	push: function(key, value) {
 		this.$private.push(key, value);
 	}
 }, {
+	/**
+	 * Constructor
+	 *
+	 * @param {string} type - type of storage
+	 * @private
+	 */
 	_construct: function(type) {
 		var storageType =
 			! type ? 'sessionStorage' : type + 'Storage';
@@ -22,6 +43,10 @@ Wee.fn.make('storage', {
 		this.storage = window[storageType];
 	},
 
+	/**
+	 * @param {string} key
+	 * @param {*} value
+	 */
 	set: function(key, value) {
 		var segments = key.toString().split('.');
 
@@ -42,6 +67,10 @@ Wee.fn.make('storage', {
 		}
 	},
 
+	/**
+	 * @param {string} key
+	 * @returns {*}
+	 */
 	get: function(key) {
 		var segments = key.toString().split('.'),
 			data = this.getData(segments.shift()),
@@ -57,6 +86,9 @@ Wee.fn.make('storage', {
 		return data;
 	},
 
+	/**
+	 * @param {string} key
+	 */
 	delete: function(key) {
 		var segments = key.toString().split('.');
 
@@ -77,6 +109,10 @@ Wee.fn.make('storage', {
 		this.storage.removeItem(key);
 	},
 
+	/**
+	 * @param {string} key
+	 * @param {*} value
+	 */
 	push: function(key, value) {
 		var segments = key.toString().split('.'),
 			data = this.get(key);
@@ -92,6 +128,11 @@ Wee.fn.make('storage', {
 		}
 	},
 
+	/**
+	 * @param {string} key
+	 * @param {*} value
+	 * @param {array} segments
+	 */
 	pushNested: function(key, value, segments) {
 		var firstKey = segments.shift(),
 			lastKey = segments.pop(),
@@ -104,6 +145,13 @@ Wee.fn.make('storage', {
 		}
 	},
 
+	/**
+	 * Retrieve data from storage.  This function will attempt to parse
+	 * the data into JSON.
+	 *
+	 * @param {string} key
+	 * @returns {string|*}
+	 */
 	getData: function(key) {
 		var data = this.storage.getItem(key);
 
@@ -114,6 +162,12 @@ Wee.fn.make('storage', {
 		return data;
 	},
 
+	/**
+	 * Attempt to stringify value before storing it
+	 *
+	 * @param {*} value
+	 * @returns {*}
+	 */
 	processValue: function(value) {
 		try {
 			value = JSON.stringify(value);
