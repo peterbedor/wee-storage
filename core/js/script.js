@@ -55,10 +55,12 @@ Wee.fn.make('storage', {
 				lastKey = segments.pop(),
 				data = this.getData(firstKey);
 
-			if (data.hasOwnProperty(lastKey)) {
-				data[lastKey] = value;
+			if (data) {
+				if (data.hasOwnProperty(lastKey)) {
+					data[lastKey] = value;
 
-				this.set(firstKey, data);
+					this.set(firstKey, data);
+				}
 			}
 		} else {
 			value = this.processValue(value);
@@ -150,16 +152,20 @@ Wee.fn.make('storage', {
 	 * the data into JSON.
 	 *
 	 * @param {string} key
-	 * @returns {string|*}
+	 * @returns {string|boolean|*}
 	 */
 	getData: function(key) {
 		var data = this.storage.getItem(key);
 
-		try {
-			data = JSON.parse(data);
-		} catch (e) {}
+		if (data) {
+			try {
+				data = JSON.parse(data);
+			} catch (e) {}
 
-		return data;
+			return data;
+		}
+
+		return false;
 	},
 
 	/**
